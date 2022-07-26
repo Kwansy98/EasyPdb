@@ -47,13 +47,12 @@ struct PdbInfo
 
 typedef struct _EZPDB
 {
-	char szModulePath[MAX_PATH];
-	char szModuleName[MAX_PATH];
+	char szDllDir[MAX_PATH];
+	char szDllBaseName[MAX_PATH];
 	char szSymbolServerUrl[1024];
 
 	char szPdbPath[MAX_PATH];
-	char szDllFile[MAX_PATH];
-	BOOL ReDownload;
+	char szDllFullPath[MAX_PATH];
 	DWORD64 SymbolTable;
 	DWORD Filesize;
 	HANDLE hProcess;
@@ -61,16 +60,9 @@ typedef struct _EZPDB
 }EZPDB, * PEZPDB;
 
 
+DWORD EzInitLocalPdb(OUT PEZPDB Pdb, IN LPCSTR szDllFullPath, IN OPTIONAL LPCSTR szPdbFullPath);
 
-
-DWORD EzInitPdb(
-	OUT PEZPDB Pdb,
-	IN LPCSTR szModulePath,
-	IN LPCSTR szModuleName,
-	IN BOOL Download,
-	IN OPTIONAL LPCSTR szSymbolServerUrl,
-	IN OPTIONAL LPCSTR szPdbDownloadDirectory
-);
+DWORD EzInitPdbFromSymbolServer(OUT PEZPDB Pdb, IN LPCSTR szDllFullPath, IN OPTIONAL LPCSTR szSymbolServerUrl, IN OPTIONAL LPCSTR szPdbDownloadDirectory);
 
 DWORD EzLoadPdb(PEZPDB Pdb);
 
