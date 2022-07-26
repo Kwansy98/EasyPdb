@@ -7,6 +7,10 @@ A very simple C library for download pdb, get rva of function, global variable a
 
 ![image](2.png)
 
+![image](3.png)
+
+![image](4.png)
+
 ## usage
 
 test_ntoskrnl_pdb function show you how to download ntoskrnl.exe pdb from microsoft symbol server, get undocument function rva and struct offset.
