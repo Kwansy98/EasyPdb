@@ -457,6 +457,25 @@ failed:
 	return FALSE;
 }
 
+BOOL EzGetStructSize(PEZPDB Pdb, LPCSTR StructName, DWORD* SizeOut)
+{
+	ULONG SymInfoSize = sizeof(SYMBOL_INFO) + MAX_SYM_NAME * sizeof(TCHAR);
+	SYMBOL_INFO* SymInfo = (SYMBOL_INFO*)malloc(SymInfoSize);
+	if (!SymInfo)
+	{
+		return FALSE;
+	}
+	ZeroMemory(SymInfo, SymInfoSize);
+	SymInfo->SizeOfStruct = sizeof(SYMBOL_INFO);
+	SymInfo->MaxNameLen = MAX_SYM_NAME;
+	if (!SymGetTypeFromName(Pdb->hProcess, EZ_PDB_BASE_OF_DLL, StructName, SymInfo))
+	{
+		return FALSE;
+	}
+	*SizeOut = SymInfo->Size;
+	return TRUE;
+}
+
 VOID EzPdbUnload(PEZPDB Pdb)
 {
 	// 清理工作

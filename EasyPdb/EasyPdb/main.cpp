@@ -33,6 +33,7 @@ int test_ntoskrnl_pdb()
 	}
 	DWORD rva = 0;
 	DWORD Offset = 0;
+	DWORD Size = 0;
 	if (EzGetRva(&pdb, "KeServiceDescriptorTable", &rva))
 	{
 		printf("KeServiceDescriptorTable: %x\n", rva);
@@ -50,6 +51,11 @@ int test_ntoskrnl_pdb()
 	if (EzGetOffset(&pdb, "_ETHREAD", L"ThreadListEntry", &Offset))
 	{
 		printf("_ETHREAD.ThreadListEntry: %x\n", Offset);
+	}
+
+	if (EzGetStructSize(&pdb, "_OBJECT_ATTRIBUTES", &Size))
+	{
+		printf("_OBJECT_ATTRIBUTES size: %x\n", Size);
 	}
 
 	EzPdbUnload(&pdb);

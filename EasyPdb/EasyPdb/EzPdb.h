@@ -68,5 +68,6 @@ DWORD EzLoadPdb(PEZPDB Pdb);
 
 BOOL EzGetRva(PEZPDB Pdb, LPCSTR SymName, DWORD* Rva);
 BOOL EzGetOffset(PEZPDB Pdb, LPCSTR StructName, LPCWSTR PropertyName, DWORD* OffsetOut);
+BOOL EzGetStructSize(PEZPDB Pdb, LPCSTR StructName, DWORD* SizeOut);
 
 VOID EzPdbUnload(PEZPDB Pdb);
