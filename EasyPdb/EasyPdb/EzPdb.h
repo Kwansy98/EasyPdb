@@ -4,6 +4,11 @@
 #include <stdio.h>
 #include <Windows.h>
 #include <DbgHelp.h>
+#include <iostream>
+#include <string>
+#include <fstream>
+#include <vector>
+#include "md5.h"
 #pragma comment(lib, "DbgHelp.lib")
 #pragma comment(lib, "Urlmon.lib")
 
@@ -47,27 +52,24 @@ struct PdbInfo
 
 typedef struct _EZPDB
 {
-	char szDllDir[MAX_PATH];
-	char szDllBaseName[MAX_PATH];
-	char szSymbolServerUrl[1024];
-
-	char szPdbPath[MAX_PATH];
-	char szDllFullPath[MAX_PATH];
-	DWORD64 SymbolTable;
-	DWORD Filesize;
 	HANDLE hProcess;
 	HANDLE hPdbFile;
-}EZPDB, * PEZPDB;
+}EZPDB, *PEZPDB;
 
 
-DWORD EzInitLocalPdb(OUT PEZPDB Pdb, IN LPCSTR szDllFullPath, IN OPTIONAL LPCSTR szPdbFullPath);
 
-DWORD EzInitPdbFromSymbolServer(OUT PEZPDB Pdb, IN LPCSTR szDllFullPath, IN OPTIONAL LPCSTR szSymbolServerUrl, IN OPTIONAL LPCSTR szPdbDownloadDirectory);
+std::string EzPdbDownload(
+	IN std::string pePath,
+	IN OPTIONAL std::string pdbDownloadPath = "",
+	IN OPTIONAL std::string symbolServer = "https://msdl.microsoft.com/download/symbols/");
 
-DWORD EzLoadPdb(PEZPDB Pdb);
+bool EzPdbLoad(IN std::string pdbPath, OUT PEZPDB Pdb);
 
-BOOL EzGetRva(PEZPDB Pdb, LPCSTR SymName, DWORD* Rva);
-BOOL EzGetOffset(PEZPDB Pdb, LPCSTR StructName, LPCWSTR PropertyName, DWORD* OffsetOut);
-BOOL EzGetStructSize(PEZPDB Pdb, LPCSTR StructName, DWORD* SizeOut);
+ULONG EzPdbGetRva(IN PEZPDB Pdb, IN std::string SymName);
 
-VOID EzPdbUnload(PEZPDB Pdb);
+ULONG EzPdbGetStructPropertyOffset(IN PEZPDB Pdb, IN std::string StructName, IN std::wstring PropertyName);
+
+ULONG EzPdbGetStructSize(IN PEZPDB Pdb, IN std::string StructName);
+
+VOID EzPdbUnload(IN PEZPDB Pdb);
+

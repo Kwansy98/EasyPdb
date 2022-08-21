@@ -21,9 +21,15 @@
     <ClCompile Include="EzPdb.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="md5.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="EzPdb.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="md5.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>
