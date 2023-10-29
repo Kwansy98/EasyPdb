@@ -7,6 +7,8 @@
 #include <string>
 #include <fstream>
 #include <vector>
+#include <locale>
+#include <codecvt>
 
 #pragma comment(lib, "DbgHelp.lib")
 #pragma comment(lib, "Urlmon.lib")
@@ -16,6 +18,7 @@
 
 namespace ez
 {
+#pragma warning(push,1)
 	namespace md5
 	{
 
@@ -83,20 +86,18 @@ namespace ez
 			h2 = 0x98badcfe;
 			h3 = 0x10325476;
 
-			//Pre-processing:
-			//append "1" bit to message    
-			//append "0" bits until message length in bits ¡Ô 448 (mod 512)
-			//append length mod (2^64) to message
-
 			for (new_len = initial_len + 1; new_len % (512 / 8) != 448 / 8; new_len++)
 				;
 
 #ifdef _KERNEL_MODE
 			msg = (UINT8*)ExAllocatePoolWithTag(PagedPool, new_len + 8, POOLTAG);
 #else
-			msg = (UINT8*)malloc(new_len + 8);
+			msg = (UINT8*)malloc((size_t)new_len + 8);
 #endif
-
+			if (!msg)
+			{
+				return;
+			}
 			memcpy(msg, initial_msg, initial_len);
 			msg[initial_len] = 0x80; // append the "1" bit; most significant bit is "first"
 			for (offset = initial_len + 1; offset < new_len; offset++)
@@ -110,8 +111,6 @@ namespace ez
 			// Process the message in successive 512-bit chunks:
 			//for each 512-bit chunk of message:
 			for (offset = 0; offset < new_len; offset += (512 / 8)) {
-
-				// break chunk into sixteen 32-bit words w[j], 0 ¡Ü j ¡Ü 15
 				for (i = 0; i < 16; i++)
 					w[i] = to_int32(msg + offset + i * 4);
 
@@ -183,14 +182,30 @@ namespace ez
 			for (size_t i = 0; i < 16; i++)
 			{
 				char ch[4] = { 0 };
-				sprintf(ch, "%02x", raw[i]);
+				snprintf(ch, ARRAYSIZE(ch), "%02x", raw[i]);
 				res += ch;
 			}
 
 			return res;
 		}
 
+		std::string Md5(std::string filePath)
+		{
+			std::ifstream file(filePath, std::ios::binary | std::ios::ate);
+			std::streamsize fileSize = file.tellg();
+			file.seekg(0, std::ios::beg);
+
+			std::vector<char> fileData(fileSize);
+			if (file.read(fileData.data(), fileSize))
+			{
+				std::string pdbMd5 = md5::Md5(fileData.data(), (ULONG)fileSize);
+				return pdbMd5;
+			}
+			return "";
+		}
+
 	}
+#pragma warning(pop)
 
 	class pdb
 	{
@@ -237,25 +252,30 @@ namespace ez
 		HANDLE _hProcess;
 		std::string _symbol_server;
 
-		std::string download(std::string pe_path)
+		std::string download(std::string pe_path, bool bRedownload = false)
 		{
 			// download pdb file from symbol server
 			// return pdb path if success, 
 			// or return empty string if failed, user can call GetLastError() to know wth is going on
 
 			std::string pdbDownloadPath;
-			char szTempDir[MAX_PATH] = { 0 };
-			if (0 == GetTempPathA(_countof(szTempDir), szTempDir))
-			{
-				return "";
-			}
 
-			pdbDownloadPath = szTempDir;
+			WCHAR wszCurrentDir[MAX_PATH] = { 0 };
+			GetModuleFileNameW(NULL, wszCurrentDir, _countof(wszCurrentDir));
+			PathCchRemoveFileSpec(wszCurrentDir, _countof(wszCurrentDir));
+			std::wstring wsCurrentDir = wszCurrentDir;
 			
-			if (pdbDownloadPath[pdbDownloadPath.size() - 1] != '\\')
+			//setup converter
+			std::wstring_convert<std::codecvt_utf8<wchar_t>, wchar_t> converter;
+
+			//use converter (.to_bytes: wstr->str, .from_bytes: str->wstr)
+			std::string CurrentDir = converter.to_bytes(wsCurrentDir);
+			
+			if (CurrentDir.back() != '\\')
 			{
-				pdbDownloadPath += "\\";
+				CurrentDir += '\\';
 			}
+			pdbDownloadPath = CurrentDir += "symbols\\";
 
 			// make sure the directory exist
 			if (!CreateDirectoryA(pdbDownloadPath.c_str(), NULL))
@@ -289,6 +309,28 @@ namespace ez
 			}
 
 			std::string pdbPath = pdbDownloadPath + md5::Md5(buffer.data(), (ULONG)size) + ".pdb";
+			std::string pdbHashCachePath = pdbPath + ".md5";
+
+			if (!bRedownload)
+			{
+				if (PathFileExistsA(pdbPath.c_str()))
+				{
+					if (PathFileExistsA(pdbHashCachePath.c_str()))
+					{
+						std::ifstream ifs(pdbHashCachePath);
+						std::string md5Cache;
+						ifs >> md5Cache;
+						ifs.close();
+
+						std::string pdbMd5 = md5::Md5(pdbPath);
+
+						if (pdbMd5 == md5Cache)
+						{
+							return pdbPath;
+						}
+					}
+				}
+			}
 
 			// get pdb info from debug info directory
 			IMAGE_DOS_HEADER* pDos = (IMAGE_DOS_HEADER*)buffer.data();
@@ -403,6 +445,11 @@ namespace ez
 			}
 
 			free(ImageBuffer);
+
+			std::string pdbMd5 = md5::Md5(pdbPath);
+			std::ofstream ofs(pdbHashCachePath);
+			ofs << pdbMd5;
+
 			return pdbPath;
 		}
 
@@ -418,14 +465,9 @@ namespace ez
 		bool init()
 		{
 			std::string pdb_path = download(_pe_path);
-			if (pdb_path.empty() && _symbol_server != "https://msdl.microsoft.com/download/symbols/")
+			if (pdb_path.empty())
 			{
-				_symbol_server = "https://msdl.microsoft.com/download/symbols/";
-				pdb_path = download(_pe_path);
-				if (pdb_path.empty())
-				{
-					return false;
-				}
+				return false;
 			}
 
 			pdb_downloaded = true;
