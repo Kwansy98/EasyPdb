@@ -429,6 +429,7 @@ namespace ez
 
 			// url
 			std::string url = _symbol_server;
+			url += "/";
 			url += pdb_info->PdbFileName;
 			url += "/";
 			url += guid_filtered;
